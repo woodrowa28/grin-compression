@@ -1,6 +1,7 @@
 package edu.grinnell.csc207.compression;
 
 import java.util.Map;
+import java.util.HashMap;
 import java.util.PriorityQueue;
 
 /**
@@ -59,6 +60,28 @@ class Node implements Comparable<Node> {
         return this.frequency - other.frequency;
     }
 }
+
+/**
+ * Stores information about the shortened code for each character. Records the value
+ * of the code and the length (number of bits in the code) for encoding purposes.
+ */
+class Code {
+    
+    protected short huffmanCode;
+    
+    protected short length;
+    
+    /**
+     * Creates a new code with the value and length of the encoded data.
+     * @param huffmanCode the value of the Huffman code representation
+     * @param length the number of bits used in the code
+     */
+    public Code(short huffmanCode, short length) {
+        this.huffmanCode = huffmanCode;
+        this.length = length;
+    }
+}
+
 /**
  * A HuffmanTree derives a space-efficient coding of a collection of byte
  * values.
@@ -74,6 +97,12 @@ class Node implements Comparable<Node> {
 public class HuffmanTree {
     
     Node treeRoot;
+    
+    /* Short is the ASCII character from 8 bits of data reading,
+     * Code is the Huffman code for encoding the data  */
+    Map<Short, Code> huffmanCodes;
+    
+    public final short eof = 256;
 
     /**
      * Constructs a new HuffmanTree from a frequency map.
@@ -82,6 +111,8 @@ public class HuffmanTree {
     public HuffmanTree (Map<Short, Integer> freqs) {
         PriorityQueue<Node> queue = makeQueue(freqs);
         treeRoot = constructTree(queue);
+        huffmanCodes = new HashMap<>();
+        recordCodes(treeRoot, (short) 0, (short) 0);
     }
 
     /**
@@ -89,8 +120,6 @@ public class HuffmanTree {
      * @param in the input file (as a BitInputStream)
      */
     public HuffmanTree (BitInputStream in) {
-        // Skip first 32 bits for magic number
-        in.readBits(32);
         treeRoot = readTree(in);
     }
     
@@ -102,8 +131,7 @@ public class HuffmanTree {
      */
     private PriorityQueue<Node> makeQueue(Map<Short, Integer> freqs) {
         PriorityQueue<Node> queue = new PriorityQueue<>();
-        // Add eof char
-        queue.add(new Node((short) 256, 1));
+        queue.add(new Node(eof, 1));
         for (Short key : freqs.keySet()) {
             queue.add(new Node(key, freqs.get(key)));
         }
@@ -125,6 +153,24 @@ public class HuffmanTree {
             queue.add(new Node(left.frequency + right.frequency, left, right));
         }
         return queue.poll();
+    }
+    
+    /**
+     * Initializes a map of every character and their Huffman code (both the value and length) 
+     * @param root the node to start at
+     * @param code the current code value based on the tree traversal
+     * @param length the length of the Huffman code (number of bits used)
+     */
+    private void recordCodes(Node root, short code, short length) {
+        if (root.isLeaf) {
+            huffmanCodes.put(root.character, new Code(code, length));
+        } else {
+            length++;
+            // Effectively adds a 0 at the end of the code (left branch)
+            recordCodes(root.left, (short) (code << 1), length);
+            // Effectively adds a 1 at the end of the code (right branch)
+            recordCodes(root.right, (short) (code << 1 + 1), length);
+        }
     }
     
     /**
@@ -154,7 +200,28 @@ public class HuffmanTree {
      * @param out the output file as a BitOutputStream
      */
     public void serialize (BitOutputStream out) {
-        // TODO: fill me in!
+        writeNode(out, treeRoot);
+    }
+    
+    /**
+     * Writes the current node of the Huffman tree to the output stream, using the
+     * serialization method defined in the instructions (see acknowledgements).
+     * If the node is an inner leaf, a 1 and the node's children are printed, and if
+     * it is a leaf, a 0 and the node value is printed.
+     * @param out the output file stream
+     * @param root the current node to serialize
+     */
+    private void writeNode (BitOutputStream out, Node root) {
+        if (root.isLeaf) {
+            // Write a 0 and the 8-digit "character" representation
+            out.writeBit(0);
+            out.writeBits(8, root.character);
+        } else {
+            // write a 1 and write the children nodes in pre-order
+            out.writeBit(1);
+            writeNode(out, root.left);
+            writeNode(out, root.right);
+        }
     }
    
     /**
@@ -165,11 +232,17 @@ public class HuffmanTree {
      * @param out the file to write the compressed output to.
      */
     public void encode (BitInputStream in, BitOutputStream out) {
-        // TODO: fill me in!
+        // Read in 8 bits at a time and output their encoded form
+        Code code;
+        while (in.hasBits()) {
+            code = huffmanCodes.get((short) in.readBits(8));
+            out.writeBits(code.huffmanCode, code.length);
+        }
+        out.close();
     }
 
     /**
-     * Decodes a stream of huffman codes from a file given as a stream of
+     * Decodes a stream of Huffman codes from a file given as a stream of
      * bits into their uncompressed form, saving the results to the given
      * output stream. Note that the EOF character is not written to out
      * because it is not a valid 8-bit chunk (it is 9 bits).
@@ -177,6 +250,34 @@ public class HuffmanTree {
      * @param out the file to write the decompressed output to.
      */
     public void decode (BitInputStream in, BitOutputStream out) {
-        // TODO: fill me in!
+        short character;
+        while (true) {
+            character = traceTree(in);
+            if (character == eof) {
+                break;
+            } else {
+                out.writeBits(character, 8);
+            }
+        }
+        out.close();
+    }
+    
+    /**
+     * Finds the next ASCII character in the encoded file by taking either the left or
+     * right branch of the tree (based on encoded input: left is 0, right is 1) until
+     * a character is reached.
+     * @param in the input file (as a BitInputStream)
+     * @return the decoded character value (as a short to include eof)
+     */
+    private short traceTree(BitInputStream in) {
+        int bit;
+        Node root = treeRoot;
+        while (true) {
+            bit = in.readBit();
+            root = (bit == 0 ? root.left : root.right);
+            if (root.isLeaf) {
+                return root.character;
+            }
+        }
     }
 }
