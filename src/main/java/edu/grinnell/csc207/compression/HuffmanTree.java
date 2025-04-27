@@ -102,7 +102,7 @@ public class HuffmanTree {
      * Code is the Huffman code for encoding the data  */
     Map<Short, Code> huffmanCodes;
     
-    public final short eof = 256;
+    private static final short EOF = 256;
 
     /**
      * Constructs a new HuffmanTree from a frequency map.
@@ -131,7 +131,7 @@ public class HuffmanTree {
      */
     private PriorityQueue<Node> makeQueue(Map<Short, Integer> freqs) {
         PriorityQueue<Node> queue = new PriorityQueue<>();
-        queue.add(new Node(eof, 1));
+        queue.add(new Node(EOF, 1));
         for (Short key : freqs.keySet()) {
             queue.add(new Node(key, freqs.get(key)));
         }
@@ -253,7 +253,7 @@ public class HuffmanTree {
         short character;
         while (true) {
             character = traceTree(in);
-            if (character == eof) {
+            if (character == EOF) {
                 break;
             } else {
                 out.writeBits(character, 8);
