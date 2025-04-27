@@ -2,6 +2,7 @@ package edu.grinnell.csc207.compression;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.HashMap;
 
 /**
  * The driver for the Grin compression program.
@@ -12,9 +13,11 @@ public class Grin {
      * .grin file denoted by outfile.
      * @param infile the file to decode
      * @param outfile the file to ouptut to
-     * @throws Exception if error setting up files
+     * @throws IOException if error parsing files
+     * @throws IllegalArgumentException if decoding file is not a .grin
      */
-    public static void decode (String infile, String outfile) throws Exception {
+    public static void decode (String infile, String outfile) throws IOException,
+            IllegalArgumentException {
         BitInputStream in = new BitInputStream(infile);
         BitOutputStream out = new BitOutputStream(outfile);
         
@@ -24,6 +27,8 @@ public class Grin {
         
         HuffmanTree hTree = new HuffmanTree(in);
         hTree.decode(in, out);
+        in.close();
+        out.close();
     }
 
     /**
@@ -32,10 +37,27 @@ public class Grin {
      * BitInputStream, consuming 8 bits at a time.
      * @param file the file to read
      * @return a frequency map for the given file
+     * @throws IOException upon file parsing error
      */
-    public static Map<Short, Integer> createFrequencyMap (String file) {
-        // TODO: fill me in!
-        return null;
+    public static Map<Short, Integer> createFrequencyMap (String file) 
+            throws IOException {
+        Map<Short, Integer> frequencies = new HashMap<>();
+        BitInputStream in = new BitInputStream(file);
+        
+        short character;
+        while (in.hasBits()) {
+            character = (short) in.readBits(8);
+            if (frequencies.containsKey(character)) {
+                frequencies.put(character, frequencies.get(character) + 1);
+            } else {
+                frequencies.put(character, 1);
+            }
+        }
+        // Add EOF char
+        frequencies.put((short) 256, 1);
+        
+        in.close();
+        return frequencies;
     }
 
     /**
@@ -45,8 +67,18 @@ public class Grin {
      * @param outfile the file to write the output to.
      * @throws IOException if error setting up files
      */
-    public static void encode(String infile, String outfile) throws IOException{
-        // TODO: fill me in!
+    public static void encode(String infile, String outfile) throws IOException {
+        Map<Short, Integer> frequencies = createFrequencyMap(infile);
+        BitInputStream in = new BitInputStream(infile);
+        BitOutputStream out = new BitOutputStream(outfile);
+        HuffmanTree hTree = new HuffmanTree(frequencies);
+        
+        out.writeBits(1846, 32);
+        hTree.serialize(out);
+        hTree.encode(in, out);
+        
+        in.close();
+        out.close();
     }
 
     /**
@@ -70,8 +102,12 @@ public class Grin {
                 default:
                     System.out.println("Usage: java Grin <encode|decode> <infile> <outfile>");
             }
-        } catch (Exception e) {
-            System.out.println("Error in file setup. Please enter valid files of proper types.");
+        } catch (IOException e) {
+            System.out.println("Error parsing file. Please enter valid files of proper types.");
+            System.out.println(e.getMessage());
+        } catch (IllegalArgumentException e) {
+            System.out.println("Not a valid file type to decode. Must be a .grin file");
+            System.out.println(e.getMessage());
         }
     }
 }

@@ -98,7 +98,7 @@ public class HuffmanTree {
     
     Node treeRoot;
     
-    /* Short is the ASCII character from 8 bits of data reading,
+    /* Short is the ASCII character from 9 bits of data reading,
      * Code is the Huffman code for encoding the data  */
     Map<Short, Code> huffmanCodes;
     
@@ -169,7 +169,7 @@ public class HuffmanTree {
             // Effectively adds a 0 at the end of the code (left branch)
             recordCodes(root.left, (short) (code << 1), length);
             // Effectively adds a 1 at the end of the code (right branch)
-            recordCodes(root.right, (short) (code << 1 + 1), length);
+            recordCodes(root.right, (short) ((code << 1) + 1), length);
         }
     }
     
@@ -182,6 +182,7 @@ public class HuffmanTree {
     private Node readTree(BitInputStream in) {
         int nextBit = in.readBit();
         Node newNode;
+        // Mark frequencies as 0 because not important for implementation
         if (nextBit == 1) {
             // 1 bit means internal node
             newNode = new Node(0, null, null);
@@ -213,9 +214,9 @@ public class HuffmanTree {
      */
     private void writeNode (BitOutputStream out, Node root) {
         if (root.isLeaf) {
-            // Write a 0 and the 8-digit "character" representation
+            // Write a 0 and the 9-digit "character" representation
             out.writeBit(0);
-            out.writeBits(8, root.character);
+            out.writeBits(root.character, 9);
         } else {
             // write a 1 and write the children nodes in pre-order
             out.writeBit(1);
@@ -234,11 +235,14 @@ public class HuffmanTree {
     public void encode (BitInputStream in, BitOutputStream out) {
         // Read in 8 bits at a time and output their encoded form
         Code code;
+        System.out.println("here?");
         while (in.hasBits()) {
             code = huffmanCodes.get((short) in.readBits(8));
             out.writeBits(code.huffmanCode, code.length);
         }
-        out.close();
+        // Write EOF
+        code = huffmanCodes.get(EOF);
+        out.writeBits(code.huffmanCode, code.length);
     }
 
     /**
@@ -259,7 +263,6 @@ public class HuffmanTree {
                 out.writeBits(character, 8);
             }
         }
-        out.close();
     }
     
     /**
