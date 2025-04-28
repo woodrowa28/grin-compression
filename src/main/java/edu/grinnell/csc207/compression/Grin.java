@@ -16,7 +16,7 @@ public class Grin {
      * @throws IOException if error parsing files
      * @throws IllegalArgumentException if decoding file is not a .grin
      */
-    public static void decode (String infile, String outfile) throws IOException,
+    public static void decode(String infile, String outfile) throws IOException,
             IllegalArgumentException {
         BitInputStream in = new BitInputStream(infile);
         BitOutputStream out = new BitOutputStream(outfile);
@@ -39,7 +39,7 @@ public class Grin {
      * @return a frequency map for the given file
      * @throws IOException upon file parsing error
      */
-    public static Map<Short, Integer> createFrequencyMap (String file) 
+    public static Map<Short, Integer> createFrequencyMap(String file) 
             throws IOException {
         Map<Short, Integer> frequencies = new HashMap<>();
         BitInputStream in = new BitInputStream(file);

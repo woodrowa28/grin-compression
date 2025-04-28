@@ -108,7 +108,7 @@ public class HuffmanTree {
      * Constructs a new HuffmanTree from a frequency map.
      * @param freqs a map from 9-bit values to frequencies.
      */
-    public HuffmanTree (Map<Short, Integer> freqs) {
+    public HuffmanTree(Map<Short, Integer> freqs) {
         PriorityQueue<Node> queue = makeQueue(freqs);
         treeRoot = constructTree(queue);
         huffmanCodes = new HashMap<>();
@@ -119,7 +119,7 @@ public class HuffmanTree {
      * Constructs a new HuffmanTree from the given file.
      * @param in the input file (as a BitInputStream)
      */
-    public HuffmanTree (BitInputStream in) {
+    public HuffmanTree(BitInputStream in) {
         treeRoot = readTree(in);
     }
     
@@ -190,7 +190,7 @@ public class HuffmanTree {
             newNode.right = readTree(in);
         } else {
             // 0 bit means leaf with char
-           newNode = new Node((short) in.readBits(9), 0);
+            newNode = new Node((short) in.readBits(9), 0);
         }
         return newNode;
     }
@@ -200,7 +200,7 @@ public class HuffmanTree {
      * serialized format.
      * @param out the output file as a BitOutputStream
      */
-    public void serialize (BitOutputStream out) {
+    public void serialize(BitOutputStream out) {
         writeNode(out, treeRoot);
     }
     
@@ -212,7 +212,7 @@ public class HuffmanTree {
      * @param out the output file stream
      * @param root the current node to serialize
      */
-    private void writeNode (BitOutputStream out, Node root) {
+    private void writeNode(BitOutputStream out, Node root) {
         if (root.isLeaf) {
             // Write a 0 and the 9-digit "character" representation
             out.writeBit(0);
@@ -232,7 +232,7 @@ public class HuffmanTree {
      * @param in the file to compress.
      * @param out the file to write the compressed output to.
      */
-    public void encode (BitInputStream in, BitOutputStream out) {
+    public void encode(BitInputStream in, BitOutputStream out) {
         // Read in 8 bits at a time and output their encoded form
         Code code;
         System.out.println("here?");
@@ -253,7 +253,7 @@ public class HuffmanTree {
      * @param in the file to decompress.
      * @param out the file to write the decompressed output to.
      */
-    public void decode (BitInputStream in, BitOutputStream out) {
+    public void decode(BitInputStream in, BitOutputStream out) {
         short character;
         while (true) {
             character = traceTree(in);
